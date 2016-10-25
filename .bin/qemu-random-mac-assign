@@ -1,0 +1,13 @@
+#!/bin/sh
+
+drive="$1"
+
+base="${drive%.*}"
+ext="${drive##*.}"
+
+MAC="$(random-mac)"
+
+newdrive="$base-$MAC.$ext"
+
+echo "$newdrive"
+mv "$drive" "$newdrive"

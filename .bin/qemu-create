@@ -1,0 +1,47 @@
+#!/bin/bash
+
+USERID=$(whoami)
+
+iso="$1"
+filename="$2"
+size="$3"
+mem="$4"
+bus="$5"
+addr="$6"
+shift
+shift
+shift
+shift
+shift
+shift
+
+qemu-img create -f qcow2 "$filename" "$size"
+
+drive="$(qemu-random-mac-assign "$filename")"
+
+# Get name of newly created TAP device; see
+# https://bbs.archlinux.org/viewtopic.php?pid=1285079#p1285079
+
+precreation=$(/usr/bin/ip tuntap list | /usr/bin/cut -d: -f1 | /usr/bin/sort)
+sudo /usr/bin/ip tuntap add user $USERID mode tap
+postcreation=$(/usr/bin/ip tuntap list | /usr/bin/cut -d: -f1 | /usr/bin/sort)
+IFACE=$(comm -13 <(echo "$precreation") <(echo "$postcreation"))
+
+
+drivename="$(basename "$drive")"
+slug="${drivename%.*}"
+macaddr="${slug##*-}"
+
+echo qemu-system-x86_64 -enable-kvm -cdrom "$iso" \
+-boot order=d -drive file="$drive",format=qcow2 \
+-m "$mem" \
+-net nic,macaddr="$macaddr" -net tap,ifname="$IFACE" \
+-usb -device usb-host,hostbus="$bus",hostaddr="$addr" \
+"$@"
+
+qemu-system-x86_64 -enable-kvm -cdrom "$iso" \
+-boot order=d -drive file="$drive",format=qcow2 \
+-m "$mem" \
+-net nic,macaddr="$macaddr" -net tap,ifname="$IFACE" \
+-usb -device usb-host,hostbus="$bus",hostaddr="$addr" \
+"$@"

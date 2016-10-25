@@ -1,0 +1,1 @@
+startx <(echo 'exec i3')

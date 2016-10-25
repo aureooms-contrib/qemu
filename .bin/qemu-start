@@ -1,0 +1,22 @@
+#!/bin/bash
+
+USERID=$(whoami)
+
+# Get name of newly created TAP device; see
+# https://bbs.archlinux.org/viewtopic.php?pid=1285079#p1285079
+
+precreation=$(/usr/bin/ip tuntap list | /usr/bin/cut -d: -f1 | /usr/bin/sort)
+sudo /usr/bin/ip tuntap add user $USERID mode tap
+postcreation=$(/usr/bin/ip tuntap list | /usr/bin/cut -d: -f1 | /usr/bin/sort)
+IFACE=$(comm -13 <(echo "$precreation") <(echo "$postcreation"))
+
+drive="$1"
+shift
+
+drivename="$(basename "$drive")"
+slug="${drivename%.*}"
+macaddr="${slug##*-}"
+
+echo qemu-system-x86_64 -enable-kvm -hda "$drive" -net nic,macaddr="$macaddr" -net tap,ifname="$IFACE" "$@"
+qemu-system-x86_64 -enable-kvm -hda "$drive" -net nic,macaddr="$macaddr" -net tap,ifname="$IFACE" "$@"
+
